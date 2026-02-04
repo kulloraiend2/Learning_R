@@ -319,10 +319,11 @@ c_last_forecast_mean
 round(((c_last_forecast_mean - c_prev) / c_prev) * 100, digits = 1)
 
 # Keskmise palga ja hinnangu keskväärtuse erinevus
-round(c_last - c_last_forecast_mean, digits = 0)
+last_and_forecast_diff <- round(c_last - c_last_forecast_mean, digits = 0)
+last_and_forecast_diff
 
 # Keskmise palga ja hinnangu keskväärtuse erinevus hinnangu keskväärtuse suhtes protsentides
-round(((c_last - c_last_forecast_mean) / c_last_forecast_mean) * 100, digits = 1)
+round((last_and_forecast_diff / c_last_forecast_mean) * 100, digits = 1)
 
 # Usalduspiiri absoluutväärtus
 confidence_limit <- abs(c_last_forecast_mean - bounds[1])
@@ -331,3 +332,5 @@ confidence_limit
 # usalduspiiri suhe ennustatavasse keskväärtusesse protsentides
 round((confidence_limit / c_last_forecast_mean) * 100, digits = 1)
 
+# Keskmise palga ja hinnangu keskväärtuse erinevuse suhe usalduspiiri absoluutväärtusesse protsentides
+round((last_and_forecast_diff / confidence_limit) * 100, digits = 1)
