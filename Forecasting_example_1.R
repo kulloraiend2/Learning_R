@@ -2,6 +2,16 @@
 # Time Series and Forecasting Using R
 # https://www.geeksforgeeks.org/r-language/time-series-and-forecasting-using-r/
 # 
+# Klassikaline etalon: forecast
+# Kõige tsiteeritum ja aastate jooksul enim testitud aegridade pakett R-is.
+# 
+# Andmestruktuur: Klassikaline ts, mts.
+# 
+# Mudelivalik: auto.arima(), ets(), tbats(), stlm(), nnetar(), spline-mudelid.
+# 
+# Tugevused: Väga stabiilne, kiire ja laialdaselt dokumenteeritud (sh Hyndmani klassikaline õpik Forecasting: Principles and Practice 2. trükk). 
+# Miinuseks on kohmakam andmetöötlus võrreldes tänapäevaste dataframe-struktuuridega.
+# 
 # Kullo 04.09.2025
 # 
 # Veendu, et pakett on olemas
@@ -49,8 +59,8 @@ library(tidyverse)
 # c[length(c)] <- 2614
 
 # Kokku keskmine palk alates 2021 I kv
-c <- c(1406, 1476, 1463, 1548, 1536, 1666, 1641, 1735, 1741, 1872, 1812, 1904, 1894, 2007, 1959, 2062, 2011, 2126, 2075)  
-# Aegrida viimase kvartali esialgu avaldatud vigase tulemusega
+c <- c(1406, 1476, 1463, 1548, 1536, 1666, 1641, 1735, 1741, 1872, 1812, 1904, 1894, 2007, 1959, 2062, 2011, 2126, 2075, 2155, 2135, 1000)  
+# Aegrida 2025 2. kvartali esialgu avaldatud vigase tulemusega
 # c[length(c)] <- 2284
 
 # RAA0012; SKP aheldatud väärtus alates 2021 I kv 
@@ -289,7 +299,7 @@ model <- auto.arima(data)
 str(model)
 summary(model)
 
-forecast_result <- forecast(model, level = c(95), h = 1)
+forecast_result <- forecast(model, level = c(50), h = 1)
 plot(forecast_result)
 str(forecast_result)
 summary(forecast_result)
@@ -334,3 +344,4 @@ round((confidence_limit / c_last_forecast_mean) * 100, digits = 1)
 
 # Keskmise palga ja hinnangu keskväärtuse erinevuse suhe usalduspiiri absoluutväärtusesse protsentides
 round((last_and_forecast_diff / confidence_limit) * 100, digits = 1)
+
