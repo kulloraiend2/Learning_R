@@ -858,6 +858,8 @@ find_ts_reliability <- function(ts_data) {
     # Eemalda seeriad, millel viimase perioodi väärtus puudub
     group_by_key() |>
     filter(max(Periood, na.rm = TRUE) == max_period) |> 
+    # Väga lühikesed seeriad jäta välja
+    filter(length(Periood) > 3)
     ungroup()
   
   
