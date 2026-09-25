@@ -857,7 +857,7 @@ find_ts_reliability <- function(ts_data) {
     # väärtus puudub, pole mõtet analüüsida.
     # Eemalda seeriad, millel viimase perioodi väärtus puudub
     group_by_key() |>
-    filter(max(Periood) == max_period) |> 
+    filter(max(Periood, na.rm = TRUE) == max_period) |> 
     ungroup()
   
   
