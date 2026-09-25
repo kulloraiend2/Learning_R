@@ -107,7 +107,6 @@ failinimi <- "TS154_20260923-144547.csv"
 # RR0295: MAKSUD JA SOTSIAALMAKSED RAHVAMAJANDUSE ARVEPIDAMISES
 failinimi <- "RR0295_20260923-163916.csv"
 
-
 # TS180: KAUBAVEDU SADAMATE KAUDU
 failinimi <- "TS180_20260923-121038.csv"
 
@@ -189,14 +188,23 @@ failinimi <- "SKK02_20260910-110136.csv"
 # RRI05: ELUKINDLUSTUS LIIGI JA KINDLUSTUSANDJA JÄRGI (KUUD)
 failinimi <- "RRI05_20260913-133807.csv"
 
+# RRI07: KAHJUKINDLUSTUS LIIGI JA KINDLUSTUSANDJA JÄRGI (KUUD)
+failinimi <- "RRI07_20260925-123222.csv"
+
 # PM09: LOOMAD JA LINNUD
 failinimi <- "PM09_20260914-102950.csv"
 
 # PM12: LOOMADE JA LINDUDE PRODUKTIIVSUS
 failinimi <- "PM12_20260914-104024.csv"
 
+# PM18: PIIMA KOKKUOST
+failinimi <- "PM18_20260925-150022.csv"
+
+# PM19: PIIMATOODETE TOOTMINE 
+failinimi <- "PM19_20260925-151045.csv"
+
 # TS205: LENNULIIKLUS TALLINNA LENNUJAAMA KAUDU 
-failinimi <- "TS205_20260924-193229.csv"
+failinimi <- "TS205_20260925-144751.csv"
 
 # TT065: REGISTREERITUD TÖÖTUD
 failinimi <- "TT065_20260916-125757.csv"
@@ -843,6 +851,15 @@ find_ts_reliability <- function(ts_data) {
   
   # Maksimaalne periood
   max_period <- max(ts_data[[time_var]], na.rm = TRUE)
+  
+  ts_data <- ts_data |> 
+    # Uurime viimase perioodi väärtuste usaldusväärsust. Kui seeria viimase perioodi 
+    # väärtus puudub, pole mõtet analüüsida.
+    # Eemalda seeriad, millel viimase perioodi väärtus puudub
+    group_by_key() |>
+    filter(max(Periood) == max_period) |> 
+    ungroup()
+  
   
   # Eralda andmetest viimane periood, mille väärtusi tahame kontrollida
   ts_data_new <- ts_data |> 
