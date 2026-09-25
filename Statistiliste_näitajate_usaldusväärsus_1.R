@@ -98,6 +98,9 @@ failinimi <- "RR059_20260923-153502.csv"
 # RR060: VALITSEMISSEKTORI KONSOLIDEERITUD VÕLA NÄITAJAD NIMIVÄÄRTUSES 
 failinimi <- "RR060_20260923-163221.csv"
 
+# RRI05: ELUKINDLUSTUS LIIGI JA KINDLUSTUSANDJA JÄRGI (KUUD)
+failinimi <- "RRI05_20260925-110931.csv"
+
 # TS154: RAHVUSVAHELINE LAEVALIIKLUS SADAMATE KAUDU 
 failinimi <- "TS154_20260923-144547.csv"
 
@@ -191,6 +194,9 @@ failinimi <- "PM09_20260914-102950.csv"
 
 # PM12: LOOMADE JA LINDUDE PRODUKTIIVSUS
 failinimi <- "PM12_20260914-104024.csv"
+
+# TS205: LENNULIIKLUS TALLINNA LENNUJAAMA KAUDU 
+failinimi <- "TS205_20260924-193229.csv"
 
 # TT065: REGISTREERITUD TÖÖTUD
 failinimi <- "TT065_20260916-125757.csv"
@@ -799,6 +805,13 @@ teisenda_aruanne_pikaks <- function(data) {
     
   } # end Aasta veergu ei ole 
   
+  # Eemalda perioodid, kus kõigi näitajate väärtused puuduvad
+  # Näiteks, kui aasta ja lühem periood olid eraldi veergudes ja aasta ei ole lõppenud.
+  data <- data |> 
+    group_by(Periood) |> 
+    filter(!all(is.na(value))) |> 
+    ungroup()
+  
   return(data)
 
 } # end teisenda_aruanne_pikaks()
@@ -810,20 +823,23 @@ find_ts_reliability <- function(ts_data) {
   # Ajaindeksi veeru nimi
   time_var <- index_var(ts_data)
   
+  ts_data <- ts_data |>
+    # Jäta alles ainult need seeriad, kus mitte kõik väärtused 
+    #   ei puudu (tühi seeria)
+    #   ei ole nullid (st eemalda seeriad, kus kõik vaatlused on 0) 
+    # ts_data on tsibble objekt, kus igal unikaalsel aegreal on oma võti
+    # Funktsioon group_by_key() rühmitab andmed automaatselt kõigi tsibble võtmetunnuste järgi, ilma et peaks neid eraldi välja kirjutama.
+    group_by_key() |>
+    filter(!all(is.na(value))) |> 
+    filter(!all(value == 0, na.rm = TRUE)) |>
+    ungroup()
+  
   ts_data <- ts_data |> 
     # Vajadusel filtreeri välja NA-d, kui mõnel seerial on alguses/lõpus puuduvad väärtused
     # Filtreeritakse välja ka rea vahepealsed puuduvad väärtused.
     filter(!is.na(value)) |> 
     # Seerias vahepealsed puuduvad väärtused pane tagasi, et seerias ei oleks ajateljel tühje kohti
     fill_gaps()
-  
-  ts_data <- ts_data |>
-    # Jäta alles ainult need seeriad, kus mitte kõik väärtused ei ole nullid (st eemalda seeriad, kus kõik vaatlused on 0)
-    # ts_data on tsibble objekt, kus igal unikaalsel aegreal on oma võti
-    # Funktsioon group_by_key() rühmitab andmed automaatselt kõigi tsibble võtmetunnuste järgi, ilma et peaks neid eraldi välja kirjutama.
-    group_by_key() |>
-    filter(!all(value == 0, na.rm = TRUE)) |>
-    ungroup()
   
   # Maksimaalne periood
   max_period <- max(ts_data[[time_var]], na.rm = TRUE)
@@ -1107,6 +1123,32 @@ ts_data <- data |>
 # print(ts_data)
 # str(ts_data)
 
+
+# Tuvasta automaatselt aegrea sagedus: 4 kvartalite puhul, 12 kuude puhul
+freq <- guess_frequency(ts_data$Periood)
+
+# Aastane muutus
+ts_diff <- ts_data |> 
+  # 1. Veendume, et ajareal poleks puuduvaid kvartaleid (hoiab ära nihkevead)
+  fill_gaps() |> 
+  # 2. Tagame selgesõnalise grupeerimise iga unikaalse seeria lõikes
+  group_by_key() |>
+  # 3. Arvutame erinevuse ja soovi korral ka % kasvu
+  mutate(
+    diff_yoy = difference(value, lag = freq),
+    pct_yoy  = round((value / lag(value, freq) - 1) * 100, digits = 1)
+  ) |> 
+  ungroup() |> 
+  # Jäta ainult viimane periood
+  # filter_index(as.character(max(ts_data[[index_var(ts_data)]], na.rm = TRUE)))
+  # filter_index(as.character(max(ts_data$Periood, na.rm = TRUE)))
+  # filter(Periood == max(Periood, na.rm = TRUE)) |> 
+  
+  # Et oleks mugav View-ga perioodi filtreerida
+  as_tibble() |> 
+  mutate(Periood = as.character(Periood))
+    
+
 # Leia aegridade usaldusväärsuse hinnangud
 res <- find_ts_reliability(ts_data)
 
@@ -1131,10 +1173,12 @@ write.xlsx(ts_rel, file = paste(str_split_i(failinimi, "_", 1), "näitajate anal
 # Filtreeri välja üks konkreetse näitaja ja joonista prognoosi koos ajalooga
 unique(ts_data$Näitaja)
 unique(ts_data$Tegevusala)
+unique(ts_data$Lisadimensioon)
 unique(prognoosid$.model)
 
 naitaja_valik = "Tuuleelektrijaamade kasutatud võimsus, MW"
 tegevusala_valik = "Info ja side"
+lisadimensiooni_valik <- "Majad"
 mudeli_valik <- unique(prognoosid$.model) # "auto_arima"
 
 prognoosid |>
@@ -1271,4 +1315,24 @@ prognoosid |>
   ) +
   theme_minimal() +
   theme(legend.position = "none")
+
+
+# Kuva ühe lisadimensiooni graafik
+prognoosid |>
+  filter(
+    Lisadimensioon == lisadimensiooni_valik
+  ) |>
+  # Funktsioonis autoplot() (pakett feasts / fabletools) värvitakse usaldusvahemike taustad (fill) ja 
+  # prognoosijooned (colour) vaikimisi mudeli (.model) alusel.
+  # Tahan kõik usaldusvahemikud sama värvi.
+  mutate(.model = mudeli_valik[1]) |> 
+  
+  autoplot(ts_data, level = c(80, 95)) +
+  labs(
+    title = paste0("Kvartaliandmete prognoos (", mudeli_valik, ")"),
+    subtitle = paste(lisadimensiooni_valik),
+    x = "Kvartal",
+    y = "Väärtus"
+  ) +
+  theme_minimal()
   
